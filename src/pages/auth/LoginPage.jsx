@@ -4,6 +4,11 @@ import toast from "react-hot-toast";
 
 import { motion } from "framer-motion";
 
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
 import axiosInstance from "../../api/axios";
 
 import AuthLayout from "../../layouts/AuthLayout";
@@ -15,6 +20,12 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 
 const LoginPage = () => {
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
   const [formData, setFormData] =
     useState({
       email: "",
@@ -33,47 +44,49 @@ const LoginPage = () => {
     });
   };
 
-  const handleSubmit = async (
-    e
-  ) => {
-    e.preventDefault();
+  const handleSubmit =
+    async (e) => {
+      e.preventDefault();
 
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      const response =
-        await axiosInstance.post(
-          "/auth/login",
-          formData
+        const response =
+          await axiosInstance.post(
+            "/auth/login",
+            formData,
+          );
+
+        localStorage.setItem(
+          "token",
+          response.data.data.token,
         );
 
-      localStorage.setItem(
-        "token",
-        response.data.data.token
-      );
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            response.data.data.user,
+          ),
+        );
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(
-          response.data.data.user
-        )
-      );
+        toast.success(
+          response.data.message,
+        );
 
-      toast.success(
-        response.data.message
-      );
-      window.location.href =
-  "/dashboard";
-    } catch (error) {
-      toast.error(
-        error.response?.data
-          ?.message ||
-          "Login failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        navigate(
+          location.state?.from ||
+            "/dashboard",
+        );
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Login failed",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <AuthLayout>
@@ -118,7 +131,9 @@ const LoginPage = () => {
               type="email"
               placeholder="Enter email"
               value={formData.email}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
             />
 
             <Input
@@ -126,8 +141,12 @@ const LoginPage = () => {
               name="password"
               type="password"
               placeholder="Enter password"
-              value={formData.password}
-              onChange={handleChange}
+              value={
+                formData.password
+              }
+              onChange={
+                handleChange
+              }
             />
 
             <Button

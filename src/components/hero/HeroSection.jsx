@@ -84,18 +84,10 @@ const HeroSection = () => {
           "
         >
           Book Luxury
-          <span className="text-gold">
-            {" "}
-            Events
-          </span>
-
+          <span className="text-gold"> Events</span>
           <br />
-
           With Seamless
-          <span className="text-gold">
-            {" "}
-            Experience
-          </span>
+          <span className="text-gold"> Experience</span>
         </motion.h1>
 
         <motion.p
@@ -120,11 +112,8 @@ const HeroSection = () => {
             leading-relaxed
           "
         >
-          Discover concerts,
-          premium experiences,
-          and VIP events with our
-          next-generation booking
-          platform.
+          Discover concerts, premium experiences, and VIP events with our
+          next-generation booking platform.
         </motion.p>
 
         <motion.div
@@ -151,17 +140,27 @@ const HeroSection = () => {
           "
         >
           <Button
-            onClick={() =>
-              navigate("/dashboard")
-            }
+            onClick={() => {
+              const token = localStorage.getItem("token");
+
+              if (!token) {
+                navigate("/login", {
+                  state: {
+                    from: "/dashboard",
+                  },
+                });
+
+                return;
+              }
+
+              navigate("/dashboard");
+            }}
           >
             Explore Events
           </Button>
 
           <button
-            onClick={() =>
-              navigate("/about")
-            }
+            onClick={() => navigate("/about")}
             className="
               px-6
               py-3
