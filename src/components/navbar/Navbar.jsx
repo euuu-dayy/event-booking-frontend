@@ -2,60 +2,42 @@ import { useState } from "react";
 
 import { motion } from "framer-motion";
 
-import {
-  Link,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import {
-  Menu,
-  X,
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import Button from "../ui/Button";
 
-import {
-  getUser,
-  logoutUser,
-} from "../../utils/auth";
+import { getUser, logoutUser } from "../../utils/auth";
 
-import {
-  logoutUserApi,
-} from "../../services/auth.service";
+import { logoutUserApi } from "../../services/auth.service";
 
 const Navbar = () => {
   const user = getUser();
 
-  const isAdmin =
-    user?.role === "admin";
+  const isAdmin = user?.role === "admin";
 
-  const location =
-    useLocation();
+  const location = useLocation();
 
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
-  const [mobileMenuOpen,
-    setMobileMenuOpen] =
-    useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout =
-    async () => {
-      try {
-        await logoutUserApi();
+  const handleLogout = async () => {
+    try {
+      await logoutUserApi();
 
-        logoutUser();
+      logoutUser();
 
-        navigate("/");
-      } catch (error) {
-        console.log(error);
+      navigate("/");
+    } catch (error) {
+      console.log(error);
 
-        logoutUser();
+      logoutUser();
 
-        navigate("/");
-      }
-    };
+      navigate("/");
+    }
+  };
 
   const navLinks = [
     {
@@ -77,8 +59,7 @@ const Navbar = () => {
       ? [
           {
             name: "My Bookings",
-            path:
-              "/my-bookings",
+            path: "/my-bookings",
           },
         ]
       : []),
@@ -160,25 +141,45 @@ const Navbar = () => {
               gap-8
             "
           >
-            {navLinks.map(
-              (link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`
-                    transition-all
-                    ${
-                      location.pathname ===
-                      link.path
-                        ? "text-gold"
-                        : "text-zinc-300 hover:text-gold"
-                    }
-                  `}
-                >
-                  {link.name}
-                </Link>
-              ),
-            )}
+            {navLinks.map((link) => (
+              <button
+                key={link.path}
+                onClick={() => {
+                  const protectedRoutes = [
+                    "/dashboard",
+                    "/my-bookings",
+                    "/admin",
+                  ];
+
+                  const token = localStorage.getItem("token");
+
+                  if (protectedRoutes.includes(link.path) && !token) {
+                    navigate("/login", {
+                      state: {
+                        from: link.path,
+                      },
+                    });
+
+                    return;
+                  }
+
+                  navigate(link.path);
+
+                  setMobileMenuOpen(false);
+                }}
+                className={`
+      transition-all
+      text-left
+      ${
+        location.pathname === link.path
+          ? "text-gold"
+          : "text-zinc-300 hover:text-gold"
+      }
+    `}
+              >
+                {link.name}
+              </button>
+            ))}
           </div>
 
           {/* Desktop Right */}
@@ -212,15 +213,11 @@ const Navbar = () => {
                       font-bold
                     "
                   >
-                    {user.name
-                      ?.charAt(0)
-                      .toUpperCase()}
+                    {user.name?.charAt(0).toUpperCase()}
                   </div>
 
                   <div>
-                    <p className="text-sm text-white">
-                      {user.name}
-                    </p>
+                    <p className="text-sm text-white">{user.name}</p>
 
                     <p
                       className="
@@ -228,17 +225,13 @@ const Navbar = () => {
                         text-zinc-400
                       "
                     >
-                      {isAdmin
-                        ? "Administrator"
-                        : "Premium User"}
+                      {isAdmin ? "Administrator" : "Premium User"}
                     </p>
                   </div>
                 </div>
 
                 <Button
-                  onClick={
-                    handleLogout
-                  }
+                  onClick={handleLogout}
                   className="
                     px-5
                     py-2
@@ -283,21 +276,13 @@ const Navbar = () => {
 
           {/* Mobile Toggle */}
           <button
-            onClick={() =>
-              setMobileMenuOpen(
-                !mobileMenuOpen,
-              )
-            }
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="
               md:hidden
               text-white
             "
           >
-            {mobileMenuOpen ? (
-              <X size={28} />
-            ) : (
-              <Menu size={28} />
-            )}
+            {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
 
@@ -323,31 +308,24 @@ const Navbar = () => {
               gap-5
             "
           >
-            {navLinks.map(
-              (link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() =>
-                    setMobileMenuOpen(
-                      false,
-                    )
-                  }
-                  className={`
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`
                     text-lg
                     transition-all
                     ${
-                      location.pathname ===
-                      link.path
+                      location.pathname === link.path
                         ? "text-gold"
                         : "text-zinc-300"
                     }
                   `}
-                >
-                  {link.name}
-                </Link>
-              ),
-            )}
+              >
+                {link.name}
+              </Link>
+            ))}
 
             {user ? (
               <>
@@ -372,15 +350,11 @@ const Navbar = () => {
                       font-bold
                     "
                   >
-                    {user.name
-                      ?.charAt(0)
-                      .toUpperCase()}
+                    {user.name?.charAt(0).toUpperCase()}
                   </div>
 
                   <div>
-                    <p className="text-white">
-                      {user.name}
-                    </p>
+                    <p className="text-white">{user.name}</p>
 
                     <p
                       className="
@@ -388,17 +362,13 @@ const Navbar = () => {
                         text-zinc-400
                       "
                     >
-                      {isAdmin
-                        ? "Administrator"
-                        : "Premium User"}
+                      {isAdmin ? "Administrator" : "Premium User"}
                     </p>
                   </div>
                 </div>
 
                 <Button
-                  onClick={
-                    handleLogout
-                  }
+                  onClick={handleLogout}
                   className="
                     w-full
                     mt-3
