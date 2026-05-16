@@ -41,24 +41,29 @@ const EventDetailsPage = () => {
 
   const [loading, setLoading] = useState(true);
 
-  const [lockingSeatId, setLockingSeatId] = useState(null);
+  const [lockingSeatId, setLockingSeatId] =
+    useState(null);
 
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [currentTime, setCurrentTime] =
+    useState(Date.now());
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [eventData, seatData] = await Promise.all([
-          getSingleEvent(id),
+        const [eventData, seatData] =
+          await Promise.all([
+            getSingleEvent(id),
 
-          getEventSeats(id),
-        ]);
+            getEventSeats(id),
+          ]);
 
         setEvent(eventData);
 
         setSeats(seatData);
       } catch (error) {
-        toast.error("Failed to load event");
+        toast.error(
+          "Failed to load event",
+        );
       } finally {
         setLoading(false);
       }
@@ -73,12 +78,13 @@ const EventDetailsPage = () => {
 
       setCurrentTime(now);
 
-      // AUTO CLEAN EXPIRED LOCKS
       setSeats((prevSeats) =>
         prevSeats.map((seat) => {
           if (
             seat.lockExpiresAt &&
-            new Date(seat.lockExpiresAt).getTime() <= now &&
+            new Date(
+              seat.lockExpiresAt,
+            ).getTime() <= now &&
             !seat.isBooked
           ) {
             return {
@@ -95,200 +101,272 @@ const EventDetailsPage = () => {
       );
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () =>
+      clearInterval(interval);
   }, []);
 
   const selectedSeats = useMemo(() => {
+    if (!currentUser?._id) {
+      return [];
+    }
+
     return seats.filter(
       (seat) =>
-        seat.lockedBy?.toString() === currentUser?._id && !seat.isBooked,
+        seat.lockedBy?.toString() ===
+          currentUser._id &&
+        !seat.isBooked,
     );
   }, [seats, currentUser]);
 
-  const totalAmount = selectedSeats.length * (event?.price || 0);
+  const totalAmount =
+    selectedSeats.length *
+    (event?.price || 0);
 
-  const handleSeatClick = async (seat) => {
-    const token = getToken();
+  const handleSeatClick =
+    async (seat) => {
+      const token = getToken();
 
-    if (!token) {
-      toast.error("Please login to continue");
-
-      navigate("/login");
-
-      return;
-    }
-
-    const isMine = seat.lockedBy?.toString() === currentUser?._id;
-
-    const lockedByAnotherUser =
-      seat.lockedBy && seat.lockedBy?.toString() !== currentUser?._id;
-
-    if (seat.isBooked) {
-      toast.error("Seat already booked");
-
-      return;
-    }
-
-    if (lockedByAnotherUser) {
-      toast.error("Seat temporarily locked");
-
-      return;
-    }
-
-    try {
-      setLockingSeatId(seat._id);
-
-      // UNLOCK SEAT
-      if (isMine) {
-        await unlockSeat(seat._id);
-
-        setSeats((prevSeats) =>
-          prevSeats.map((s) =>
-            s._id === seat._id
-              ? {
-                  ...s,
-
-                  lockedBy: null,
-                }
-              : s,
-          ),
+      if (!token || !currentUser) {
+        toast.error(
+          "Please login first",
         );
 
-        toast.success(`${seat.seatNumber} removed`);
+        navigate("/login");
 
         return;
       }
 
-      // LOCK SEAT
-      const response = await lockSeat(seat._id);
+      const isMine =
+        seat.lockedBy?.toString() ===
+        currentUser._id;
 
-      const updatedSeat = response.data;
+      const lockedByAnotherUser =
+        seat.lockedBy &&
+        seat.lockedBy?.toString() !==
+          currentUser._id;
 
-      setSeats((prevSeats) =>
-        prevSeats.map((s) => (s._id === updatedSeat._id ? updatedSeat : s)),
-      );
+      if (seat.isBooked) {
+        toast.error(
+          "Seat already booked",
+        );
 
-      toast.success(`${updatedSeat.seatNumber} selected`);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Seat action failed");
-    } finally {
-      setLockingSeatId(null);
-    }
-  };
+        return;
+      }
 
-  const handleBooking = async () => {
-    try {
-      const bookingPayload = {
-        eventId: event._id,
+      if (lockedByAnotherUser) {
+        toast.error(
+          "Seat temporarily locked",
+        );
 
-        seatIds: selectedSeats.map((seat) => seat._id),
-      };
+        return;
+      }
 
-      await createBooking(bookingPayload);
+      try {
+        setLockingSeatId(seat._id);
 
-      toast.success("Booking confirmed");
+        // UNLOCK
+        if (isMine) {
+          await unlockSeat(seat._id);
 
-      // REFRESH SEATS
-      const updatedSeats = await getEventSeats(id);
+          setSeats((prevSeats) =>
+            prevSeats.map((s) =>
+              s._id === seat._id
+                ? {
+                    ...s,
 
-      setSeats(updatedSeats);
+                    lockedBy: null,
 
-      navigate("/my-bookings");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Booking failed");
-    }
-  };
+                    lockExpiresAt: null,
+                  }
+                : s,
+            ),
+          );
 
-  const getRemainingTime = (expiresAt) => {
+          toast.success(
+            `${seat.seatNumber} removed`,
+          );
+
+          return;
+        }
+
+        // LOCK
+        const response =
+          await lockSeat(seat._id);
+
+        const updatedSeat =
+          response.data;
+
+        setSeats((prevSeats) =>
+          prevSeats.map((s) =>
+            s._id === updatedSeat._id
+              ? updatedSeat
+              : s,
+          ),
+        );
+
+        toast.success(
+          `${updatedSeat.seatNumber} selected`,
+        );
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Seat action failed",
+        );
+      } finally {
+        setLockingSeatId(null);
+      }
+    };
+
+  const getRemainingTime = (
+    expiresAt,
+  ) => {
     if (!expiresAt) {
       return null;
     }
 
-    const diff = new Date(expiresAt) - currentTime;
+    const diff =
+      new Date(expiresAt) -
+      currentTime;
 
     if (diff <= 0) {
       return "Expired";
     }
 
-    const minutes = Math.floor(diff / 1000 / 60);
+    const minutes = Math.floor(
+      diff / 1000 / 60,
+    );
 
-    const seconds = Math.floor((diff / 1000) % 60);
+    const seconds = Math.floor(
+      (diff / 1000) % 60,
+    );
 
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    return `${minutes}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
-  const handleProceedBooking = async () => {
-    try {
-      // STEP 1
-      // Create booking first
+  const handleProceedBooking =
+    async () => {
+      const token = getToken();
 
-      const booking = await createBooking({
-        eventId: event._id,
+      if (!token || !currentUser) {
+        toast.error(
+          "Please login first",
+        );
 
-        seatIds: selectedSeats.map((seat) => seat._id),
-      });
+        navigate("/login");
 
-      // STEP 2
-      // Create Razorpay order
+        return;
+      }
 
-      const order = await createOrder(booking._id);
+      if (
+        selectedSeats.length === 0
+      ) {
+        toast.error(
+          "Please select seats",
+        );
 
-      // STEP 3
-      // Open Razorpay popup
+        return;
+      }
 
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      try {
+        const booking =
+          await createBooking({
+            eventId: event._id,
 
-        amount: order.amount,
+            seatIds:
+              selectedSeats.map(
+                (seat) => seat._id,
+              ),
+          });
 
-        currency: order.currency,
+        const order =
+          await createOrder(
+            booking._id,
+          );
 
-        name: "LuxSeat",
+        const options = {
+          key: import.meta.env
+            .VITE_RAZORPAY_KEY_ID,
 
-        description: "Premium Event Booking",
+          amount: order.amount,
 
-        order_id: order.id,
+          currency:
+            order.currency,
 
-        modal: {
-          ondismiss: async function () {
-            await markPaymentFailed(booking._id);
+          name: "LuxSeat",
 
-            toast.error("Payment cancelled");
+          description:
+            "Premium Event Booking",
+
+          order_id: order.id,
+
+          modal: {
+            ondismiss:
+              async function () {
+                await markPaymentFailed(
+                  booking._id,
+                );
+
+                toast.error(
+                  "Payment cancelled",
+                );
+              },
           },
-        },
 
-        handler: async function (response) {
-          try {
-            await verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
+          handler:
+            async function (
+              response,
+            ) {
+              try {
+                await verifyPayment({
+                  razorpay_order_id:
+                    response.razorpay_order_id,
 
-              razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_payment_id:
+                    response.razorpay_payment_id,
 
-              razorpay_signature: response.razorpay_signature,
+                  razorpay_signature:
+                    response.razorpay_signature,
 
-              bookingId: booking._id,
-            });
+                  bookingId:
+                    booking._id,
+                });
 
-            toast.success("Payment successful");
+                toast.success(
+                  "Payment successful",
+                );
 
-            navigate("/my-bookings");
-          } catch (error) {
-            toast.error("Payment verification failed");
-          }
-        },
+                navigate(
+                  "/my-bookings",
+                );
+              } catch (error) {
+                toast.error(
+                  "Payment verification failed",
+                );
+              }
+            },
 
-        theme: {
-          color: "#D4AF37",
-        },
-      };
+          theme: {
+            color: "#D4AF37",
+          },
+        };
 
-      const razorpay = new window.Razorpay(options);
+        const razorpay =
+          new window.Razorpay(
+            options,
+          );
 
-      razorpay.open();
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Booking failed");
-    }
-  };
+        razorpay.open();
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Booking failed",
+        );
+      }
+    };
 
   if (loading) {
     return (
@@ -313,7 +391,6 @@ const EventDetailsPage = () => {
 
       <div className="pt-36 px-6 pb-20">
         <div className="max-w-7xl mx-auto">
-          {/* Event Info */}
           <GlassCard className="mb-10">
             <div
               className="
@@ -335,12 +412,24 @@ const EventDetailsPage = () => {
                   {event.title}
                 </h1>
 
-                <p className="text-zinc-400 mt-4">{event.description}</p>
+                <p className="text-zinc-400 mt-4">
+                  {event.description}
+                </p>
 
                 <div className="mt-6 space-y-2">
-                  <p>Venue: {event.venue}</p>
+                  <p>
+                    Venue:
+                    {" "}
+                    {event.venue}
+                  </p>
 
-                  <p>Date: {new Date(event.eventDate).toLocaleDateString()}</p>
+                  <p>
+                    Date:
+                    {" "}
+                    {new Date(
+                      event.eventDate,
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
@@ -355,7 +444,9 @@ const EventDetailsPage = () => {
                     py-6
                   "
                 >
-                  <p className="text-zinc-400">Ticket Price</p>
+                  <p className="text-zinc-400">
+                    Ticket Price
+                  </p>
 
                   <h2
                     className="
@@ -372,7 +463,6 @@ const EventDetailsPage = () => {
             </div>
           </GlassCard>
 
-          {/* Seats */}
           <GlassCard>
             <div
               className="
@@ -382,7 +472,6 @@ const EventDetailsPage = () => {
                 gap-12
               "
             >
-              {/* Left */}
               <div className="flex-1">
                 <div className="mb-10">
                   <h2
@@ -395,11 +484,11 @@ const EventDetailsPage = () => {
                   </h2>
 
                   <p className="text-zinc-400 mt-2">
-                    Premium booking experience
+                    Premium booking
+                    experience
                   </p>
                 </div>
 
-                {/* Screen */}
                 <div className="mb-14">
                   <div
                     className="
@@ -424,7 +513,6 @@ const EventDetailsPage = () => {
                   </p>
                 </div>
 
-                {/* Seat Grid */}
                 <div
                   className="
                     grid
@@ -435,17 +523,27 @@ const EventDetailsPage = () => {
                 >
                   {seats.map((seat) => {
                     const isMine =
-                      seat.lockedBy?.toString() === currentUser?._id;
+                      currentUser?._id &&
+                      seat.lockedBy?.toString() ===
+                        currentUser._id;
 
                     const lockedByAnotherUser =
                       seat.lockedBy &&
-                      seat.lockedBy?.toString() !== currentUser?._id;
+                      seat.lockedBy?.toString() !==
+                        currentUser?._id;
 
                     return (
                       <button
                         key={seat._id}
-                        onClick={() => handleSeatClick(seat)}
-                        disabled={seat.isBooked || lockedByAnotherUser}
+                        onClick={() =>
+                          handleSeatClick(
+                            seat,
+                          )
+                        }
+                        disabled={
+                          seat.isBooked ||
+                          lockedByAnotherUser
+                        }
                         className={`
                           h-14
                           rounded-2xl
@@ -463,7 +561,12 @@ const EventDetailsPage = () => {
                                   : "bg-zinc-800 hover:bg-zinc-700"
                           }
 
-                          ${lockingSeatId === seat._id ? "animate-pulse" : ""}
+                          ${
+                            lockingSeatId ===
+                            seat._id
+                              ? "animate-pulse"
+                              : ""
+                          }
                         `}
                       >
                         <div
@@ -473,20 +576,25 @@ const EventDetailsPage = () => {
                             items-center
                             justify-center
                             leading-tight
-                        "
+                          "
                         >
-                          <span>{seat.seatNumber}</span>
+                          <span>
+                            {seat.seatNumber}
+                          </span>
 
-                          {isMine && seat.lockExpiresAt && (
-                            <span
-                              className="
-                                text-[10px]
-                                mt-1
+                          {isMine &&
+                            seat.lockExpiresAt && (
+                              <span
+                                className="
+                                  text-[10px]
+                                  mt-1
                                 "
-                            >
-                              {getRemainingTime(seat.lockExpiresAt)}
-                            </span>
-                          )}
+                              >
+                                {getRemainingTime(
+                                  seat.lockExpiresAt,
+                                )}
+                              </span>
+                            )}
                         </div>
                       </button>
                     );
@@ -494,7 +602,6 @@ const EventDetailsPage = () => {
                 </div>
               </div>
 
-              {/* Summary */}
               <div className="lg:w-[350px]">
                 <div
                   className="
@@ -518,16 +625,19 @@ const EventDetailsPage = () => {
                   </h2>
 
                   <div className="mt-8 space-y-6">
-                    {/* Selected Seats */}
                     <div>
-                      <p className="text-zinc-500">Selected Seats</p>
+                      <p className="text-zinc-500">
+                        Selected Seats
+                      </p>
 
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {selectedSeats.length > 0 ? (
-                          selectedSeats.map((seat) => (
-                            <div
-                              key={seat._id}
-                              className="
+                        {selectedSeats.length >
+                        0 ? (
+                          selectedSeats.map(
+                            (seat) => (
+                              <div
+                                key={seat._id}
+                                className="
                                   px-3
                                   py-2
                                   rounded-xl
@@ -535,19 +645,25 @@ const EventDetailsPage = () => {
                                   text-black
                                   font-semibold
                                 "
-                            >
-                              {seat.seatNumber}
-                            </div>
-                          ))
+                              >
+                                {
+                                  seat.seatNumber
+                                }
+                              </div>
+                            ),
+                          )
                         ) : (
-                          <p className="text-zinc-400">No seats selected</p>
+                          <p className="text-zinc-400">
+                            No seats selected
+                          </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Amount */}
                     <div>
-                      <p className="text-zinc-500">Total Amount</p>
+                      <p className="text-zinc-500">
+                        Total Amount
+                      </p>
 
                       <h2
                         className="
@@ -561,11 +677,15 @@ const EventDetailsPage = () => {
                       </h2>
                     </div>
 
-                    {/* Proceed */}
                     <Button
                       className="w-full"
-                      disabled={selectedSeats.length === 0}
-                      onClick={handleProceedBooking}
+                      disabled={
+                        selectedSeats.length ===
+                        0
+                      }
+                      onClick={
+                        handleProceedBooking
+                      }
                     >
                       Proceed To Payment
                     </Button>
@@ -579,5 +699,4 @@ const EventDetailsPage = () => {
     </div>
   );
 };
-
 export default EventDetailsPage;
