@@ -196,9 +196,8 @@ const Navbar = () => {
               <Link to="/register">
                 <button
                   className="
-                    hidden
-                    md:block
-                    px-5
+                    px-4
+                    md:px-5
                     py-2
                     rounded-2xl
                     border
@@ -207,6 +206,8 @@ const Navbar = () => {
                     hover:border-gold
                     hover:text-gold
                     transition-all
+                    text-sm
+                    md:text-base
                   "
                 >
                   Register

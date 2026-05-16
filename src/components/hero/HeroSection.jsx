@@ -1,8 +1,12 @@
 import { motion } from "framer-motion";
 
+import { useNavigate } from "react-router-dom";
+
 import Button from "../ui/Button";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
   return (
     <section
       className="
@@ -146,11 +150,18 @@ const HeroSection = () => {
             gap-5
           "
         >
-          <Button>
+          <Button
+            onClick={() =>
+              navigate("/dashboard")
+            }
+          >
             Explore Events
           </Button>
 
           <button
+            onClick={() =>
+              navigate("/about")
+            }
             className="
               px-6
               py-3
