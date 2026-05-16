@@ -309,22 +309,42 @@ const Navbar = () => {
             "
           >
             {navLinks.map((link) => (
-              <Link
+              <button
                 key={link.path}
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  const protectedRoutes = [
+                    "/dashboard",
+                    "/my-bookings",
+                    "/admin",
+                  ];
+
+                  const token = localStorage.getItem("token");
+
+                  if (protectedRoutes.includes(link.path) && !token) {
+                    setMobileMenuOpen(false);
+
+                    navigate("/login", {
+                      state: {
+                        from: link.path,
+                      },
+                    });
+
+                    return;
+                  }
+
+                  navigate(link.path);
+
+                  setMobileMenuOpen(false);
+                }}
                 className={`
-                    text-lg
-                    transition-all
-                    ${
-                      location.pathname === link.path
-                        ? "text-gold"
-                        : "text-zinc-300"
-                    }
-                  `}
+                text-left
+                text-lg
+                transition-all
+                ${location.pathname === link.path ? "text-gold" : "text-zinc-300"}
+              `}
               >
                 {link.name}
-              </Link>
+              </button>
             ))}
 
             {user ? (
